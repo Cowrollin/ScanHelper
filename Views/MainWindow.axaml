@@ -4,6 +4,7 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:viewModels="clr-namespace:ScanHelper.ViewModels"
+        xmlns:local="clr-namespace:ScanHelper.ViewModels"
         mc:Ignorable="d" d:DesignWidth="600" d:DesignHeight="700"
         x:Class="ScanHelper.Views.MainWindow"
         x:DataType="vm:MainWindowViewModel"
@@ -13,11 +14,11 @@
         TransparencyLevelHint="AcrylicBlur"
         Background="Transparent"
         WindowStartupLocation="CenterScreen"
-        CanResize="False"
+        CanResize="True"
 >
 
     <Window.DataContext>
-        <vm:MainWindowViewModel />
+        <local:MainWindowViewModel />
     </Window.DataContext>
     
     <Window.Styles>
@@ -28,22 +29,21 @@
         </Style>
     </Window.Styles>
     
-    <Grid ColumnDefinitions="247, *">
+    <Grid ColumnDefinitions="247, *" >
         <Grid Grid.Column="0" Height="170" Width="100" RowDefinitions="40,40,40,40">
         
             <Button Content="Добавить" Grid.Row="0" Command="{Binding AddButtonCliked}"/>
-            <Button Content="Выделить" Grid.Row="1" />
-            <Button Content="Обрезать" Grid.Row="2"/>
+            <Button Content="Выделить" Grid.Row="1" Command="{Binding SetButtonClicked}"/>
+            <Button Content="Обрезать" Grid.Row="2" Click="Button_OnClick"/>
             <Button Content="Сохранить" Grid.Row="3"/>
         </Grid>
         
         <Grid Height="442" Width="327" Grid.Column="1" HorizontalAlignment="Left">
             <Border BorderBrush="White" BorderThickness="2" 
                     BoxShadow="5 5 10 0 DarkGray">
-                <Image Stretch="UniformToFill" Height="422" Width="307" Source="{Binding ScanImage}" />
+                <Image Name="BaseImage" Stretch="UniformToFill" Height="422" Width="307" Source="{Binding BitmapImage}" />
             </Border>
         </Grid>
-         
         
     </Grid>
    

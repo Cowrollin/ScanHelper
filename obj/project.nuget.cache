@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "dgSpecHash": "SskezYCRa9sEqIaUOXmfDetk/sJjRr0DHa6B7GsJlO79OifzirXVPt37DR99UrpyeTC9TJTTH5J9Ch1RKjDETw==",
+  "dgSpecHash": "FdVfXAXuIiIqV6KfzeQHFKnmeIKVUhoED382a01zl2O/QFUHKGLv/XIFKVx/n9UxMaj9TD8X+FrnwGP5NQ+D1Q==",
   "success": true,
   "projectFilePath": "O:\\MyProjects\\ScanHelper\\ScanHelper.csproj",
   "expectedPackageFiles": [
@@ -21,6 +21,7 @@
     "C:\\Users\\RKKA\\.nuget\\packages\\avalonia.themes.simple\\11.0.10\\avalonia.themes.simple.11.0.10.nupkg.sha512",
     "C:\\Users\\RKKA\\.nuget\\packages\\avalonia.win32\\11.0.10\\avalonia.win32.11.0.10.nupkg.sha512",
     "C:\\Users\\RKKA\\.nuget\\packages\\avalonia.x11\\11.0.10\\avalonia.x11.11.0.10.nupkg.sha512",
+    "C:\\Users\\RKKA\\.nuget\\packages\\communitytoolkit.mvvm\\8.2.2\\communitytoolkit.mvvm.8.2.2.nupkg.sha512",
     "C:\\Users\\RKKA\\.nuget\\packages\\dynamicdata\\7.9.5\\dynamicdata.7.9.5.nupkg.sha512",
     "C:\\Users\\RKKA\\.nuget\\packages\\harfbuzzsharp\\7.3.0\\harfbuzzsharp.7.3.0.nupkg.sha512",
     "C:\\Users\\RKKA\\.nuget\\packages\\harfbuzzsharp.nativeassets.linux\\7.3.0\\harfbuzzsharp.nativeassets.linux.7.3.0.nupkg.sha512",
