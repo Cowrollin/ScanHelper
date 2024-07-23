@@ -21,13 +21,20 @@ public partial class MainWindowViewModel : ObservableObject
     [ObservableProperty] 
     private WriteableBitmap _bitmapImage;
     private WriteableBitmap wrtBitmap;
-    
+    public event EventHandler MyEvent;
+
+
     
     public MainWindowViewModel()
     {
         wrtBitmap = new WriteableBitmap(new PixelSize(100, 100), new Vector(100, 100), PixelFormat.Bgra8888);
         ResetBitmap(0);
         Update();
+    }
+    
+    public void TriggerMyEvent()
+    {
+        MyEvent?.Invoke(this, EventArgs.Empty);
     }
     
     // AddImage 
@@ -52,74 +59,46 @@ public partial class MainWindowViewModel : ObservableObject
             if (File.Exists(selectedFile))
             {
                 _ScanImage = new Bitmap(selectedFile);
-                BitmapImage = new WriteableBitmap(_ScanImage.PixelSize, _ScanImage.Dpi, PixelFormat.Bgra8888);
-                using (var lockbmp = BitmapImage.Lock())
+                wrtBitmap = new WriteableBitmap(_ScanImage.PixelSize, _ScanImage.Dpi, PixelFormat.Bgra8888);
+                using (var lockbmp = wrtBitmap.Lock())
                 {
                     _ScanImage.CopyPixels(new PixelRect(0,0, _ScanImage.PixelSize.Width, _ScanImage.PixelSize.Height), lockbmp.Address, lockbmp.RowBytes * lockbmp.Size.Height, lockbmp.RowBytes);
                 }
             }
         }
+        Update();
     }
 
     public void SetButtonClicked()
     {
-        ResetBitmap(1);
+        RedRectangle();
         Update();
     }
 
     private unsafe void RedRectangle()
     {
-        using (var buf = BitmapImage.Lock())
+        using (var buf = wrtBitmap.Lock())
         {
-            int w = BitmapImage.PixelSize.Width;
-            int h = BitmapImage.PixelSize.Height;
+            int w = wrtBitmap.PixelSize.Width;
+            int h = wrtBitmap.PixelSize.Height;
             var ptr = (uint*)buf.Address;
-
-            for (int y = 0; y < h; y++)
+            Console.WriteLine($"index {(int)ptr}");
+            for (var i = 0; i < w * (h - 1); i++)
             {
-                for (int x = 0; x < w; x++)
+                uint pixel = ptr[i];
+                
+                // Разлагаем значение пикселя на компоненты ARGB
+                byte A = (byte)((pixel >> 24) & 0xFF);
+                byte R = (byte)((pixel >> 16) & 0xFF);
+                byte G = (byte)((pixel >> 8) & 0xFF);
+                byte B = (byte)(pixel & 0xFF);
+
+                if (!(A == 255 && R == 255 && G == 255 && B == 255))
                 {
-                    *(ptr + x + y) = 0xFFFFFFFF;
+                    *(ptr + i) = 0xFF000000;
                 }
             }
         }
-        
-
-        /*
-        using (var buf = _BitmapImage.Lock())
-        {
-            int w = _BitmapImage.PixelSize.Width;
-            int h = _BitmapImage.PixelSize.Height;
-            int stride = buf.RowBytes;
-            IntPtr buffer = buf.Address;
-
-            for (int y = 0; y < h; y++)
-            {
-                for (int x = 0; x < w; x++)
-                {
-                    IntPtr pixelPtr = buffer + y * stride + x * 4;
-                    int pixel = Marshal.ReadInt32(pixelPtr);
-
-                    byte blue = (byte)(pixel & 0xFF);
-                    byte green = (byte)((pixel >> 8) & 0xFF);
-                    byte red = (byte)((pixel >> 16) & 0xFF);
-                    byte alpha = (byte)((pixel >> 24) & 0xFF);
-
-                    if (!(red == 255 && green == 255 && blue == 255))
-                    {
-                        red = 255;
-                        green = 0;
-                        blue = 0;
-
-                        int newPixel = (alpha << 24) | (red << 16) | (green << 8) | blue;
-                        Marshal.WriteInt32(pixelPtr, newPixel);
-                        Console.WriteLine("Paint!");
-                    }
-                }
-            }
-        }*/
-
-        
     } 
     
     // -------------------------------
@@ -140,12 +119,12 @@ public partial class MainWindowViewModel : ObservableObject
                     *(ptr + i) = 0xFFFF0000;
                 }
             }
-            Console.WriteLine($"Done!");
         }
     }
 
     private void Update()
     {
         BitmapImage = wrtBitmap;
+        TriggerMyEvent();
     }
 }
