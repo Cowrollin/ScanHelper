@@ -35,13 +35,13 @@
             <Button Content="Добавить" Grid.Row="0" Command="{Binding AddButtonCliked}"/>
             <Button Content="Выделить" Grid.Row="1" Command="{Binding SetButtonClicked}"/>
             <Button Content="Обрезать" Grid.Row="2" Click="Button_OnClick"/>
-            <Button Content="Сохранить" Grid.Row="3"/>
+            <Button Content="Сохранить" Grid.Row="3" Command="{Binding SaveButtonClicked}"/>
         </Grid>
         
         <Grid Height="442" Width="327" Grid.Column="1" HorizontalAlignment="Left">
             <Border BorderBrush="White" BorderThickness="2" 
                     BoxShadow="5 5 10 0 DarkGray">
-                <Image Name="BaseImage" Stretch="UniformToFill" Height="422" Width="307" Source="{Binding BitmapImage}" />
+                <Image Name="BaseImage" Source="{Binding BitmapImage}" />
             </Border>
         </Grid>
         

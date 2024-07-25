@@ -11,7 +11,7 @@ using Avalonia.Media;
 using Avalonia.Media.Imaging;
 using Avalonia.Platform;
 using CommunityToolkit.Mvvm.ComponentModel;
-using ScanHelper.Views;
+using static ScanHelper.Pixel;
 
 namespace ScanHelper.ViewModels;
 
@@ -21,6 +21,9 @@ public partial class MainWindowViewModel : ObservableObject
     [ObservableProperty] 
     private WriteableBitmap _bitmapImage;
     private WriteableBitmap wrtBitmap;
+    private byte WhiteSensivity = 190;
+    private byte BufferWhiteZone = 1;
+    
     public event EventHandler MyEvent;
 
 
@@ -28,7 +31,6 @@ public partial class MainWindowViewModel : ObservableObject
     public MainWindowViewModel()
     {
         wrtBitmap = new WriteableBitmap(new PixelSize(100, 100), new Vector(100, 100), PixelFormat.Bgra8888);
-        ResetBitmap(0);
         Update();
     }
     
@@ -75,34 +77,96 @@ public partial class MainWindowViewModel : ObservableObject
         Update();
     }
 
+    public void SaveButtonClicked()
+    {
+        BitmapImage.Save("testimage.jpg");
+    }
+
     private unsafe void RedRectangle()
+    {
+        int w = wrtBitmap.PixelSize.Width;
+        int h = wrtBitmap.PixelSize.Height;
+        int minX = w, minY = h, maxX = 0, maxY = 0;
+        using (var buf = wrtBitmap.Lock())
+        {
+            var ptr = (uint*)buf.Address;
+            int c = 1;
+            bool inPhoto = false;
+            int whiteRowCount = 0;
+            for (int y = 0; y < h-1; y++)
+            {
+                bool nonWhiteZone = false;
+                for (int x = 0; x < w; x++)
+                {
+                    Pixel pxl = new Pixel(ptr[c]);
+                    if ((pxl.GetPixelArgb(ColorChannel.R) < WhiteSensivity) || (pxl.GetPixelArgb(ColorChannel.G) < WhiteSensivity) || (pxl.GetPixelArgb(ColorChannel.B) < WhiteSensivity))
+                    {
+                        nonWhiteZone = true;
+                        if (x < minX) minX = x;
+                        if (y < minY) minY = y;
+                        if (x > maxX) maxX = x;
+                        if (y > maxY) maxY = y;
+                    }
+                    c++;
+                }
+                if (nonWhiteZone)
+                {
+                    whiteRowCount = 0;
+                    inPhoto = true;
+                }
+                else if (inPhoto)
+                {
+                    whiteRowCount++;
+                    if (whiteRowCount >= BufferWhiteZone)
+                    {
+                        Console.WriteLine($"Photo!");
+                        DrawRectangle(minX, minY, maxX, maxY);
+                        minX = w;
+                        minY = h;
+                        maxX = 0; 
+                        maxY = 0;
+                        inPhoto = false;
+                        whiteRowCount = 0;
+                    }
+                }
+            }
+
+            if (minX < maxX && minY < maxY)
+            {
+                DrawRectangle(minX, minY, maxX, maxY);
+            }
+        }
+    }
+
+    private unsafe void DrawRectangle(int _x, int _y, int _xx, int _yy)
     {
         using (var buf = wrtBitmap.Lock())
         {
-            int w = wrtBitmap.PixelSize.Width;
-            int h = wrtBitmap.PixelSize.Height;
+            int h = _yy - _y;
+            int w = _xx - _x;
+            int c = 0;
             var ptr = (uint*)buf.Address;
-            Console.WriteLine($"index {(int)ptr}");
-            for (var i = 0; i < w * (h - 1); i++)
+            for (int y = 0; y < wrtBitmap.Size.Height; y++)
             {
-                uint pixel = ptr[i];
-                
-                // Разлагаем значение пикселя на компоненты ARGB
-                byte A = (byte)((pixel >> 24) & 0xFF);
-                byte R = (byte)((pixel >> 16) & 0xFF);
-                byte G = (byte)((pixel >> 8) & 0xFF);
-                byte B = (byte)(pixel & 0xFF);
-
-                if (!(A == 255 && R == 255 && G == 255 && B == 255))
+                for (int x = 0; x < wrtBitmap.Size.Width; x++)
                 {
-                    *(ptr + i) = 0xFF000000;
+                    if (y == _y && x >= _x && x <= _xx)  
+                        *(ptr + c) = 0xFFFF0000;  // верхняя граница
+                    if (y == _yy && x >= _x && x <= _xx)  
+                        *(ptr + c) = 0xFFFF0000;  // нижняя граница
+                    if (x == _x && y >= _y && y <= _yy)  
+                        *(ptr + c) = 0xFFFF0000;  // левая граница
+                    if (x == _xx && y >= _y && y <= _yy)  
+                        *(ptr + c) = 0xFFFF0000;  // правая граница
+                    c++;
                 }
             }
+
         }
-    } 
-    
+    }
+
     // -------------------------------
-    public unsafe void ResetBitmap(int q)
+    public unsafe void ResetBitmap()
     {
         using (var buf = wrtBitmap.Lock())
         {
@@ -114,10 +178,7 @@ public partial class MainWindowViewModel : ObservableObject
             // Clear.
             for (var i = 0; i < w * (h - 1); i++)
             {
-                if (i % 2 == q)
-                {
-                    *(ptr + i) = 0xFFFF0000;
-                }
+                *(ptr + i) = 0xFFFFFFFF;
             }
         }
     }
