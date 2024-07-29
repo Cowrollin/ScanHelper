@@ -14,7 +14,7 @@
         TransparencyLevelHint="AcrylicBlur"
         Background="Transparent"
         WindowStartupLocation="CenterScreen"
-        CanResize="True"
+        CanResize="False"
 >
 
     <Window.DataContext>
@@ -25,29 +25,76 @@
         <Style Selector="Button">
             <Setter Property="Width" Value="90" />
             <Setter Property="Height" Value="30" />
-            
+        </Style>
+        <Style Selector="TextBlock">
+            <Setter Property="Foreground" Value="Gray"/>
         </Style>
     </Window.Styles>
     
-    <Grid ColumnDefinitions="247, *" >
-        <Grid Grid.Column="0" Height="170" Width="100" RowDefinitions="40,40,40,40">
-        
-            <Button Content="Добавить" Grid.Row="0" Command="{Binding AddButtonCliked}"/>
-            <Button Content="Выделить" Grid.Row="1" Command="{Binding SetButtonClicked}"/>
-            <Button Content="Обрезать" Grid.Row="2" Click="Button_OnClick"/>
-            <Button Content="Сохранить" Grid.Row="3" Command="{Binding SaveButtonClicked}"/>
-        </Grid>
-        
-        <Grid Height="442" Width="327" Grid.Column="1" HorizontalAlignment="Left">
-            <Border BorderBrush="White" BorderThickness="2" 
-                    BoxShadow="5 5 10 0 DarkGray">
-                <Image Name="BaseImage" Source="{Binding BitmapImage}" />
-            </Border>
-        </Grid>
-        
-    </Grid>
-   
+    
+    <StackPanel>
+        <Grid Name="ScanAndSettings" ColumnDefinitions="365, *" >
+            <StackPanel Name="Scan" Height="466" Width="327" Grid.Column="0">
+                <Border Name="ScanBorder" BorderBrush="White" BorderThickness="2" 
+                        BoxShadow="5 5 10 0 DarkGray" Width="327" Height="442" Margin="0 10 0 0 ">
+                    <Image Name="BaseImage" Source="{Binding BitmapImage}" />
+                </Border>
+                <TextBlock Name="ScanName" Text="Preview" FontSize="16" Margin="10 -465 0 0"/>
+                <Button Width="40" Height="40" Background="LightGray" 
+                        Margin="144 -462 0 0" CornerRadius="10" 
+                        HorizontalContentAlignment="Center" Command="{Binding AddButtonCliked}">
+                    <TextBlock Text="+" FontSize="30" 
+                               HorizontalAlignment="Center" VerticalAlignment="Center" 
+                               Foreground="#444444" Margin="0 -3 0 0"/>
+                </Button>
+                <TextBlock Text="Add scan" FontSize="13" Foreground="Gray" Margin="0 -200 0 0" HorizontalAlignment="Center"/>
+            </StackPanel>
+            
+            
+            <StackPanel Grid.Column="1" >
+                <Border Name="Logo" Width="194" Height="75" Background="Gray" Margin="0 36 29 15"/>
+                
+                <TextBlock Text="Border White" FontSize="18"/>
+                <Slider Width="194" HorizontalAlignment="Left"/>
+                
+                <TextBlock Text="Minimal Photo Size" FontSize="18" Margin="0 20 0 0"/>
+                <WrapPanel>
+                    <TextBox />
+                    <TextBlock Text="Width" FontSize="16" VerticalAlignment="Center"/>
+                </WrapPanel>
+                <TextBlock Text="x" Margin="20 0 0 0 " FontSize="16"/>
+                <WrapPanel>
+                    <TextBox />
+                    <TextBlock Text="Height" FontSize="16" VerticalAlignment="Center"/>
+                </WrapPanel>
+                
+                <TextBlock Name="SaveAs" Text="Save as:" FontSize="12" Margin="0 20 0 0"/>
+                <Border Width="207" Height="30" Background="Gray" CornerRadius="5" HorizontalAlignment="Left">
+                    <TextBlock Text="C:\Directory\File\" HorizontalAlignment="Left" VerticalAlignment="Center"/>
+                </Border>
 
-    
-    
+                <Button Content="Browse" Width="68" Height="30" CornerRadius="5" HorizontalAlignment="Right" Margin="0 6 29 0"/>
+                
+                <Button Content="Добавить" Grid.Row="0"/>
+                <Button Content="Выделить" Grid.Row="1" Command="{Binding SetButtonClicked}"/>
+                <Button Content="Сохранить" Grid.Row="3" Command="{Binding SaveButtonClicked}"/>
+            </StackPanel>
+        
+        </Grid>
+        
+        <Grid RowDefinitions="*,*">
+            <TextBlock Grid.Row="0" Name="DetectedPhoto" Text="Detected photo (selected needed)" FontSize="16" Margin="10 0 0 0"/>
+            
+            <ScrollViewer Grid.Row="1" HorizontalScrollBarVisibility="Visible">
+                <WrapPanel>
+                    <Border CornerRadius="10" Margin="0 0 10 0" Background="Bisque"  Width="153" Height="113"/>
+                    <Border CornerRadius="10" Margin="0 0 10 0" Background="Gray" Width="153" Height="113"/>
+                    <Border CornerRadius="10" Margin="0 0 10 0" Background="Green" Width="153" Height="113"/>
+                    <Border CornerRadius="10" Margin="0 0 10 0" Background="DarkRed" Width="153" Height="113"/>
+                    <Border CornerRadius="10" Margin="0 0 10 0" Background="PaleTurquoise" Width="153" Height="113"/>
+                </WrapPanel>
+            </ScrollViewer>
+        </Grid>
+        
+    </StackPanel>
 </Window>

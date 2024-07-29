@@ -22,14 +22,10 @@ public partial class MainWindowViewModel : ObservableObject
     private WriteableBitmap _bitmapImage;
     private WriteableBitmap wrtBitmap;
     private byte WhiteSensivity = 240;
-    private byte BufferWhiteZone = 2;
     private int MinWidthPhoto = 600;
     private int MinHeightPhoto = 600;
-    private List<RectCoord> PhotoMass = new List<RectCoord> {};
 
     public event EventHandler MyEvent;
-
-
     
     public MainWindowViewModel()
     {
@@ -79,16 +75,16 @@ public partial class MainWindowViewModel : ObservableObject
         RedRectangle();
         Update();
     }
-
+    
     public void SaveButtonClicked()
     {
-        BitmapImage.Save("testimage.jpg");
+        
     }
     
     
     
     // Выделяем
-    private unsafe void RedRectangle()
+    private void RedRectangle()
     {
         List<RectCoord> imageBounds = FindAllImageBounds();
         int c = 0;
@@ -100,127 +96,6 @@ public partial class MainWindowViewModel : ObservableObject
             {
                 c++;
                 Console.WriteLine($" - {item.GetCoord()}");
-            }
-        }
-        Console.WriteLine(c);
-        /*GetCoord(true);
-        foreach (var item in PhotoMass)
-        {
-            Console.WriteLine($"{item.GetCoord()}");
-        }
-        GetCoord(false);
-        Console.WriteLine("");
-        foreach (var item in PhotoMass)
-        {
-            Console.WriteLine($"{item.GetCoord()}");
-        }*/
-    }
-    
-    // метод для определения границ с буфером по ширине и высоте
-    private unsafe void GetCoord(bool _axis)
-    {
-        int w = wrtBitmap.PixelSize.Width;
-        int h = wrtBitmap.PixelSize.Height;
-        int minX = w, minY = h, maxX = 0, maxY = 0;
-        
-        if (_axis) // y --------------------------------------
-        {
-            using (var buf = wrtBitmap.Lock())
-            {
-                var ptr = (uint*)buf.Address;
-                int c = 0;
-                bool inPhoto = false;
-                int whiteRowCount = 0;
-            
-                for (int y = 0; y < h; y++)
-                {
-                    bool nonWhiteZone = false;
-                    for (int x = 0; x < w; x++)
-                    {
-                        Pixel pxl = new Pixel(ptr[c]);
-                        if ((pxl.GetPixelArgb(ColorChannel.R) < WhiteSensivity) || (pxl.GetPixelArgb(ColorChannel.G) < WhiteSensivity) || (pxl.GetPixelArgb(ColorChannel.B) < WhiteSensivity))
-                        {
-                            nonWhiteZone = true;
-                            if (x < minX) minX = x;
-                            if (y < minY) minY = y;
-                            if (x > maxX) maxX = x;
-                            if (y > maxY) maxY = y;
-                        }
-                        c++;
-                    }
-                    
-                    if (nonWhiteZone)
-                    {
-                        whiteRowCount = 0;
-                        inPhoto = true;
-                    }
-                    else if (inPhoto)
-                    {
-                        whiteRowCount++;
-                        if (whiteRowCount >= BufferWhiteZone)
-                        {
-                            RectCoord secRectCoord = new RectCoord(minX, minY, maxX, maxY);
-                            PhotoMass.Add(secRectCoord);
-                            
-                            minX = w;
-                            minY = h;
-                            maxX = 0; 
-                            maxY = 0;
-                            inPhoto = false;
-                            whiteRowCount = 0;
-                        }
-                    }
-                }
-            }
-        }
-        else // x ------------------------
-        {
-            using (var buf = wrtBitmap.Lock())
-            {
-                var ptr = (uint*)buf.Address;
-                int c = 1;
-                bool inPhoto = false;
-                int whiteCollumnCount = 0;
-                
-                for (int x = 0; x < w; x++)
-                {
-                    bool nonWhiteZone = false;
-                    for (int y = 0; y < h; y++)
-                    {
-                        Pixel pxl = new Pixel(ptr[y * w + x]);
-                        if ((pxl.GetPixelArgb(ColorChannel.R) < WhiteSensivity) || (pxl.GetPixelArgb(ColorChannel.G) < WhiteSensivity) || (pxl.GetPixelArgb(ColorChannel.B) < WhiteSensivity))
-                        {
-                            nonWhiteZone = true;
-                            if (x < minX) minX = x;
-                            if (y < minY) minY = y;
-                            if (x > maxX) maxX = x;
-                            if (y > maxY) maxY = y;
-                        }
-                        c++;
-                    }
-                    
-                    if (nonWhiteZone)
-                    {
-                        whiteCollumnCount = 0;
-                        inPhoto = true;
-                    }
-                    else if (inPhoto)
-                    {
-                        whiteCollumnCount++;
-                        if (whiteCollumnCount >= BufferWhiteZone)
-                        {
-                            RectCoord secRectCoord = new RectCoord(minX, minY, maxX, maxY);
-                            PhotoMass.Add(secRectCoord);
-                            
-                            minX = w;
-                            minY = h;
-                            maxX = 0; 
-                            maxY = 0;
-                            inPhoto = false;
-                            whiteCollumnCount = 0;
-                        }
-                    }
-                }
             }
         }
     }
@@ -251,7 +126,7 @@ public partial class MainWindowViewModel : ObservableObject
         return rectangles;
     }
     
-    // другой матеод для определения границ, путем очереди
+    // метод для определения границ, путем очереди
     private unsafe RectCoord GetBoundsOfConnectedPixels(bool[,] visited , int startX, int startY)
     {
         int w = wrtBitmap.PixelSize.Width;
@@ -334,10 +209,6 @@ public partial class MainWindowViewModel : ObservableObject
     
     
     
-    
-    
-    
-    
     // Обновляем картинку
     private void Update()
     {
@@ -345,6 +216,7 @@ public partial class MainWindowViewModel : ObservableObject
         TriggerMyEvent();
     }
 
+    // Граница белого
     private bool isWhite(Pixel _pxl)
     {
         return _pxl.GetPixelArgb(ColorChannel.R) >= WhiteSensivity &&
