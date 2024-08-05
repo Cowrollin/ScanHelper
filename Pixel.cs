@@ -1,5 +1,4 @@
 using System;
-
 namespace ScanHelper;
 
 public enum ColorChannel
@@ -35,9 +34,11 @@ public struct Pixel
                 throw new ArgumentException("Invalid color channel");
         }
     }
-
-    public bool IsColor(byte A, byte R, byte G, byte B)
+    
+    public bool isWhite(byte WhiteSensivity)
     {
-        return GetPixelArgb(ColorChannel.A) == A && GetPixelArgb(ColorChannel.R) == R && GetPixelArgb(ColorChannel.G) == G && GetPixelArgb(ColorChannel.B) == B;
+        return GetPixelArgb(ColorChannel.R) >= WhiteSensivity &&
+               GetPixelArgb(ColorChannel.G) >= WhiteSensivity &&
+               GetPixelArgb(ColorChannel.B) >= WhiteSensivity;
     }
 }

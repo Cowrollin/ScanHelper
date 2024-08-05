@@ -1,16 +1,21 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.IO;
 using System.Runtime.InteropServices;
+using System.Threading.Tasks;
 using System.Windows.Input;
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Dialogs.Internal;
 using Avalonia.Markup.Xaml.Converters;
 using Avalonia.Media;
 using Avalonia.Media.Imaging;
+using Avalonia.OpenGL.Surfaces;
 using Avalonia.Platform;
 using CommunityToolkit.Mvvm.ComponentModel;
+using DynamicData;
 using static ScanHelper.Pixel;
 
 namespace ScanHelper.ViewModels;
@@ -20,6 +25,8 @@ public partial class MainWindowViewModel : ObservableObject
     private Bitmap? _ScanImage;
     [ObservableProperty] 
     private WriteableBitmap _bitmapImage;
+    public ObservableCollection<PreviewImage> PreviewImages { get; set; }
+
     private WriteableBitmap wrtBitmap;
     private byte WhiteSensivity = 240;
     private int MinWidthPhoto = 600;
@@ -29,6 +36,7 @@ public partial class MainWindowViewModel : ObservableObject
     
     public MainWindowViewModel()
     {
+        PreviewImages = new ObservableCollection<PreviewImage>();
         wrtBitmap = new WriteableBitmap(new PixelSize(100, 100), new Vector(100, 100), PixelFormat.Bgra8888);
         Update();
     }
@@ -38,7 +46,7 @@ public partial class MainWindowViewModel : ObservableObject
         MyEvent?.Invoke(this, EventArgs.Empty);
     }
     
-    // AddImage 
+    // Add Scan 
     public async void AddButtonCliked()
     {
         // выбираем файл с изображением
@@ -63,49 +71,59 @@ public partial class MainWindowViewModel : ObservableObject
                 wrtBitmap = new WriteableBitmap(_ScanImage.PixelSize, _ScanImage.Dpi, PixelFormat.Bgra8888);
                 using (var lockbmp = wrtBitmap.Lock())
                 {
-                    _ScanImage.CopyPixels(new PixelRect(0,0, _ScanImage.PixelSize.Width, _ScanImage.PixelSize.Height), lockbmp.Address, lockbmp.RowBytes * lockbmp.Size.Height, lockbmp.RowBytes);
+                    _ScanImage.CopyPixels(new Avalonia.PixelRect(0,0, _ScanImage.PixelSize.Width, _ScanImage.PixelSize.Height), lockbmp.Address, lockbmp.RowBytes * lockbmp.Size.Height, lockbmp.RowBytes);
                 }
             }
         }
         Update();
     }
 
+    // run algorythm
     public void SetButtonClicked()
     {
         RedRectangle();
         Update();
     }
     
+    // save images
     public void SaveButtonClicked()
     {
-        
+        int c = 0;
+        foreach (var item in PreviewImages)
+        {
+            if (item.IsChecked)
+            {
+                c++;
+                item.Image.Save($"Photo_{c}.png");
+            }
+        }
     }
-    
     
     
     // Выделяем
     private void RedRectangle()
     {
-        List<RectCoord> imageBounds = FindAllImageBounds();
-        int c = 0;
+        List<PixelRect> imageBounds = FindAllImageBounds();
         foreach (var item in imageBounds)
         {
-            int x, y, xx, yy;
-            (x, y, xx, yy) = item.GetCoord();
-            if ((xx - x > MinWidthPhoto) && (yy - y) > MinHeightPhoto)
+            if (item.Width > MinWidthPhoto && item.Height > MinHeightPhoto)
             {
-                c++;
-                Console.WriteLine($" - {item.GetCoord()}");
+                PreviewImage pi = new PreviewImage();
+                pi.Image = GetPhotoFromCoord(item);
+                pi.IsChecked = true;
+                PreviewImages.Add(pi);
+                Console.WriteLine("!");
             }
         }
     }
 
-    private unsafe List<RectCoord> FindAllImageBounds()
+    // ищем первый пиксель картинки и вызываем метод GetBoundsOfConnectedPixels
+    private unsafe List<PixelRect> FindAllImageBounds()
     {
         int w = wrtBitmap.PixelSize.Width;
         int h = wrtBitmap.PixelSize.Height;
         bool[,] visited = new bool[w, h];
-        List<RectCoord> rectangles = new List<RectCoord>();
+        List<PixelRect> rectangles = new List<PixelRect>();
 
         using (var buf = wrtBitmap.Lock())
         {
@@ -115,10 +133,10 @@ public partial class MainWindowViewModel : ObservableObject
                 for (int x = 0; x < w; x++)
                 {
                     Pixel pxl = new Pixel(ptr[y * w + x]);
-                    if (!visited[x, y] && !isWhite(pxl))
+                    if (!visited[x, y] && !pxl.isWhite(WhiteSensivity))
                     {
-                        RectCoord rect = GetBoundsOfConnectedPixels(visited, x, y);
-                        rectangles.Add(rect);
+                        PixelRect pixelRect = GetBoundsOfConnectedPixels(visited, x, y);
+                        rectangles.Add(pixelRect);
                     }
                 }
             }
@@ -127,7 +145,7 @@ public partial class MainWindowViewModel : ObservableObject
     }
     
     // метод для определения границ, путем очереди
-    private unsafe RectCoord GetBoundsOfConnectedPixels(bool[,] visited , int startX, int startY)
+    private unsafe PixelRect GetBoundsOfConnectedPixels(bool[,] visited , int startX, int startY)
     {
         int w = wrtBitmap.PixelSize.Width;
         int h = wrtBitmap.PixelSize.Height;
@@ -153,7 +171,7 @@ public partial class MainWindowViewModel : ObservableObject
                     continue;
                 
                 Pixel pxl = new Pixel(ptr[y * w + x]);
-                if (isWhite(pxl))
+                if (pxl.isWhite(WhiteSensivity))
                     continue;
                 visited[x, y] = true;
 
@@ -174,7 +192,7 @@ public partial class MainWindowViewModel : ObservableObject
                 
             }
         }
-        return new RectCoord(minX, minY, maxX, maxY);
+        return new PixelRect(minX, minY, maxX - minX, maxY - minY);
 
     }
     
@@ -205,44 +223,84 @@ public partial class MainWindowViewModel : ObservableObject
 
         }
     }
+
+    // Копируем пиксели с основной картинки на другую
+    private WriteableBitmap GetPhotoFromCoord(PixelRect _coord)
+    {
+        WriteableBitmap resultBitmap = new WriteableBitmap(_coord.Size, _ScanImage.Dpi, PixelFormat.Bgra8888);;
+        
+        int w = resultBitmap.PixelSize.Width;
+        int h = resultBitmap.PixelSize.Height;
+
+        using (var buf = resultBitmap.Lock())
+        {
+            using (var buf2 = wrtBitmap.Lock())
+            {
+                unsafe
+                {
+                    var ptr = (uint*)buf.Address;
+                    var ptr2 = (uint*)buf2.Address;
+                    for (int y = 0; y < h; y++)
+                    {
+                        for (int x = 0; x < w; x++)
+                        {
+                            ptr[y * w + x] = ptr2[(y + _coord.Y) * wrtBitmap.PixelSize.Width + x + _coord.X];
+                        }
+                    }
+                }
+            }
+        }
+
+        return resultBitmap;
+    }
     
+    // Save photos in file
+    private async Task SavePhotos(WriteableBitmap wbitmap)
+    {
+        /*if (wbitmap == null)
+            throw new ArgumentNullException(nameof(wbitmap));
+        
+        var saveFileDialog = new SaveFileDialog
+        {
+            DefaultExtension = "png",
+            Filters = new List<FileDialogFilter>
+            {
+                new FileDialogFilter { Name = "PNG", Extensions = new List<string> { "png" } },
+                new FileDialogFilter { Name = "JPEG", Extensions = new List<string> { "jpg", "jpeg" } },
+                new FileDialogFilter { Name = "BMP", Extensions = new List<string> { "bmp" } }
+            }
+        };
+
+        var filePath = await saveFileDialog.ShowAsync(new Window());
+
+        if (!string.IsNullOrEmpty(filePath))
+        {
+            // Создание директории, если она не существует
+            var directory = Path.GetDirectoryName(filePath);
+            if (!Directory.Exists(directory))
+                Directory.CreateDirectory(directory);
+
+            // Сохранение изображения в файл
+            using (var fileStream = new FileStream(filePath, FileMode.Create, FileAccess.Write))
+            { 
+                wbitmap.Save(fileStream);
+            }
+        }*/
+    }
     
-    
-    
-    // Обновляем картинку
+    // Обновляем изображение
     private void Update()
     {
         BitmapImage = wrtBitmap;
         TriggerMyEvent();
     }
+}
 
-    // Граница белого
-    private bool isWhite(Pixel _pxl)
-    {
-        return _pxl.GetPixelArgb(ColorChannel.R) >= WhiteSensivity &&
-               _pxl.GetPixelArgb(ColorChannel.G) >= WhiteSensivity &&
-               _pxl.GetPixelArgb(ColorChannel.B) >= WhiteSensivity;
-    }
+public partial class PreviewImage : ObservableObject
+{
+    [ObservableProperty]
+    private WriteableBitmap image;
 
-    // Класс для хранения угловых координат границ 
-    public class RectCoord
-    {
-        private int minX;
-        private int minY;
-        private int maxX;
-        private int maxY;
-        
-        public RectCoord(int _x, int _y, int _xx, int _yy)
-        {
-            minX = _x;
-            minY = _y;
-            maxX = _xx;
-            maxY = _yy;
-        }
-        
-        public (int, int, int, int) GetCoord()
-        {
-            return (minX, minY, maxX, maxY);
-        }
-    }
+    [ObservableProperty]
+    private bool isChecked;
 }
